@@ -1,5 +1,5 @@
 {
-  "name": "self-improving-content-generation-loop",
+  "name": "self-improving-content-loop",
   "private": true,
   "scripts": {
     "test": "npm run test:python && npm run test:node && npm --prefix renderer/slideshow test && npm --prefix renderer/video test",

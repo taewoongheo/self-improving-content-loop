@@ -1,6 +1,6 @@
-# Self-Improving Content Generation Loop
+# Self-Improving Content Loop
 
-A reusable content-generation system that uses research and observed performance to improve future content decisions. LIFT CODE is its first application: during prelaunch, the current configuration builds a relevant U.S. strength-training audience with standalone TikTok content that neither promotes the unreleased app nor asks the audience to act.
+A reusable content loop that uses research and observed performance to improve future content decisions. LIFT CODE is its first application: during prelaunch, the current configuration builds a relevant U.S. strength-training audience with standalone TikTok content that neither promotes the unreleased app nor asks the audience to act.
 
 ## Flow
 

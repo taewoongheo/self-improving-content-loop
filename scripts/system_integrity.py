@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic integrity checks for the Self-Improving Content Generation Loop."""
+"""Deterministic integrity checks for the Self-Improving Content Loop."""
 
 from __future__ import annotations
 

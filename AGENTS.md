@@ -1,8 +1,8 @@
-# Self-Improving Content Generation Loop
+# Self-Improving Content Loop
 
 ## Objective
 
-This repository develops a reusable content-generation loop that improves its future decisions from research and observed performance. Its first application is increasing qualified App Store inflow for LIFT CODE and, through that, supporting app revenue. During prelaunch there is no App Store path, so the current application builds a relevant U.S. strength-training audience with standalone TikTok value. Research, followers, engagement, content volume, and technical sophistication are means or diagnostics—not the final goal.
+This repository develops a reusable content loop that improves its future decisions from research and observed performance. Its first application is increasing qualified App Store inflow for LIFT CODE and, through that, supporting app revenue. During prelaunch there is no App Store path, so the current application builds a relevant U.S. strength-training audience with standalone TikTok value. Research, followers, engagement, content volume, and technical sophistication are means or diagnostics—not the final goal.
 
 `docs/marketing-funnel.md` owns the funnel and measurement contract. A missing metric is a measurement gap, not proof that a stage is the bottleneck.
 
