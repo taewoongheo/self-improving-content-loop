@@ -1,0 +1,64 @@
+# Local SQLite data
+db/*.sqlite
+db/*.sqlite-*
+db/*.db
+db/*.db-*
+db/*-journal
+db/*-wal
+db/*-shm
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Temporary renderer handoffs
+.tmp/
+tmp/
+
+# Renderer dependencies and builds
+node_modules/
+dist/
+.vite/
+
+# Local slideshow reference evidence
+renderer/slideshow/formats/*/references/**/*.png
+renderer/slideshow/formats/*/references/**/*.jpg
+renderer/slideshow/formats/*/references/**/*.jpeg
+renderer/slideshow/formats/*/references/**/*.webp
+
+# Local self-contained slideshow projects
+renderer/slideshow/formats/*/contents/*.json
+
+# Local slideshow production assets and renders
+renderer/slideshow/public/assets/*
+!renderer/slideshow/public/assets/.gitkeep
+renderer/slideshow/renders/*
+!renderer/slideshow/renders/.gitkeep
+
+# Local video reference evidence
+renderer/video/formats/*/references/**/*.png
+renderer/video/formats/*/references/**/*.jpg
+renderer/video/formats/*/references/**/*.jpeg
+renderer/video/formats/*/references/**/*.webp
+renderer/video/formats/*/references/**/*.mp4
+renderer/video/formats/*/references/**/*.mov
+renderer/video/formats/*/references/**/*.webm
+renderer/video/formats/*/references/**/*.m4v
+
+# Local video projects, uploaded media, and renders
+renderer/video/formats/*/contents/*.json
+renderer/video/public/assets/*
+!renderer/video/public/assets/.gitkeep
+renderer/video/renders/*
+!renderer/video/renders/.gitkeep
+
+# Local credentials
+.env
+.env.*
+!.env.example
+
+# Private TikTok Studio Analytics exports
+local-data/tiktok-studio/
+
+# macOS
+.DS_Store

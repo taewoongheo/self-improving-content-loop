@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LIFT CODE hypothesis tree</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f4f1ea;
+      --surface: #fffdf8;
+      --ink: #1e211d;
+      --muted: #6f746c;
+      --line: #d7d4cb;
+      --line-strong: #a9aca3;
+      --active: #297a54;
+      --active-soft: #e5f2e9;
+      --branched: #315c88;
+      --branched-soft: #e7edf5;
+      --closed: #7a7168;
+      --closed-soft: #ece9e5;
+      --message: #a74d2a;
+      --copy: #7556a8;
+      --shadow: 0 14px 36px rgba(40, 42, 36, 0.08);
+      --radius: 14px;
+      --mono: "SFMono-Regular", "Roboto Mono", Consolas, monospace;
+      --sans: "Avenir Next", Avenir, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+    button { font: inherit; }
+    button:focus-visible, [tabindex]:focus-visible {
+      outline: 3px solid rgba(49, 92, 136, 0.35);
+      outline-offset: 3px;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 22px 28px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(244, 241, 234, 0.94);
+    }
+    .title-block { display: flex; align-items: baseline; gap: 12px; }
+    h1 { margin: 0; font-size: 19px; letter-spacing: -0.02em; }
+    .readonly {
+      color: var(--muted);
+      font: 11px/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .refresh {
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .refresh:hover { border-color: var(--ink); }
+    .refresh[disabled] { cursor: wait; opacity: 0.55; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(110px, 1fr));
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .metric { padding: 15px 28px; border-right: 1px solid var(--line); }
+    .metric:last-child { border-right: 0; }
+    .metric-value { display: block; font: 600 22px/1.1 var(--mono); }
+    .metric-label { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      min-height: 0;
+    }
+    main {
+      min-width: 0;
+      overflow: auto;
+      padding: 26px 28px 56px;
+    }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: 12px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--closed); }
+    .dot.active { background: var(--active); }
+    .dot.branched { background: var(--branched); }
+    .updated { color: var(--muted); font: 11px/1.3 var(--mono); }
+
+    .forest { min-width: 690px; }
+    .root + .root { margin-top: 34px; padding-top: 34px; border-top: 1px solid var(--line); }
+    .branch {
+      position: relative;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .children {
+      display: grid;
+      gap: 18px;
+      margin: 18px 0 0 34px;
+      padding-left: 34px;
+      border-left: 1px solid var(--line-strong);
+    }
+    .children > .branch::before {
+      content: "";
+      position: absolute;
+      left: -34px;
+      top: 30px;
+      width: 34px;
+      border-top: 1px solid var(--line-strong);
+    }
+
+    .node {
+      width: min(640px, calc(100vw - 470px));
+      min-width: 480px;
+      padding: 17px 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 2px 0 rgba(40, 42, 36, 0.03);
+      cursor: pointer;
+      transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    }
+    .node:hover { border-color: var(--line-strong); box-shadow: var(--shadow); transform: translateY(-1px); }
+    .node.selected { border-color: var(--branched); box-shadow: 0 0 0 2px rgba(49, 92, 136, 0.12), var(--shadow); }
+    .node-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .node-id { font: 700 13px/1 var(--mono); letter-spacing: 0.02em; }
+    .badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 23px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: var(--closed-soft);
+      color: var(--closed);
+      font: 600 10px/1 var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge.active { color: var(--active); background: var(--active-soft); }
+    .badge.branched { color: var(--branched); background: var(--branched-soft); }
+    .badge.message { color: var(--message); background: #f5e7df; }
+    .badge.copywriting { color: var(--copy); background: #eee8f6; }
+    .statement { margin: 13px 0 0; font-size: 15px; line-height: 1.52; text-wrap: pretty; }
+    .content-list { display: grid; gap: 7px; margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--line); }
+    .content-row { display: grid; grid-template-columns: 68px minmax(90px, 1fr) repeat(3, 42px); align-items: center; gap: 8px; }
+    .content-id { font: 600 11px/1 var(--mono); }
+    .publication { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .checkpoint { display: grid; place-items: center; height: 24px; border: 1px dashed var(--line-strong); border-radius: 6px; color: var(--muted); font: 10px/1 var(--mono); }
+    .checkpoint.done { border-style: solid; border-color: #9fc7ae; background: var(--active-soft); color: var(--active); }
+    .empty-contents { margin-top: 14px; color: var(--muted); font-size: 11px; }
+
+    aside {
+      min-width: 0;
+      overflow: auto;
+      padding: 24px;
+      border-left: 1px solid var(--line);
+      background: #ebe8e0;
+    }
+    .inspector-kicker { color: var(--muted); font: 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+    .inspector-title { margin: 9px 0 0; font: 700 20px/1.2 var(--mono); }
+    .inspector-empty { margin: 16px 0 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .detail-section { margin-top: 24px; }
+    .detail-section h3 { margin: 0 0 10px; color: var(--muted); font: 600 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+    .detail-section p { margin: 0; font-size: 13px; line-height: 1.55; }
+    .detail-list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+    .detail-item { padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font-size: 12px; line-height: 1.45; }
+    .detail-item strong { font-family: var(--mono); }
+    .content-copy { margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
+    .copy-block + .copy-block { margin-top: 9px; }
+    .copy-block div { margin-top: 4px; white-space: pre-wrap; }
+    .empty-copy { color: var(--muted); }
+    .checkpoint-detail { margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
+    .checkpoint-detail:first-of-type { margin-top: 12px; }
+    .checkpoint-meta { color: var(--muted); font: 10px/1.5 var(--mono); }
+    .checkpoint-copy { margin-top: 5px; color: var(--ink); font-size: 11px; line-height: 1.5; }
+    .meta-grid { display: grid; grid-template-columns: auto 1fr; gap: 7px 12px; margin: 0; font-size: 12px; }
+    .meta-grid dt { color: var(--muted); }
+    .meta-grid dd { margin: 0; overflow-wrap: anywhere; }
+
+    .empty-state, .error-state {
+      display: grid;
+      place-items: center;
+      min-height: 420px;
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(255, 253, 248, 0.55);
+      text-align: center;
+    }
+    .empty-state h2, .error-state h2 { margin: 0; font-size: 18px; }
+    .empty-state p, .error-state p { max-width: 430px; margin: 10px 24px 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 1fr; }
+      aside { border: 1px solid var(--line); border-radius: var(--radius); margin: 0 18px 24px; max-height: 420px; }
+      main { padding: 22px 18px 32px; }
+      .forest { min-width: 620px; }
+      .node { width: 540px; }
+    }
+    @media (max-width: 620px) {
+      header { padding-inline: 18px; }
+      .title-block { display: grid; gap: 5px; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+      .metric { padding: 12px 18px; border-bottom: 1px solid var(--line); }
+      .metric:nth-child(2) { border-right: 0; }
+      .forest { min-width: 520px; }
+      .node { width: 450px; min-width: 450px; }
+      .content-row { grid-template-columns: 58px minmax(70px, 1fr) repeat(3, 38px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .node { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="title-block">
+        <h1>LIFT CODE hypothesis tree</h1>
+        <span class="readonly">read-only · SQLite derived</span>
+      </div>
+      <button class="refresh" type="button" id="refresh">Refresh data</button>
+    </header>
+
+    <section class="summary" aria-label="Hypothesis loop summary">
+      <div class="metric"><span class="metric-value" id="metric-hypotheses">—</span><span class="metric-label">hypotheses</span></div>
+      <div class="metric"><span class="metric-value" id="metric-leaves">—</span><span class="metric-label">active leaves</span></div>
+      <div class="metric"><span class="metric-value" id="metric-contents">—</span><span class="metric-label">contents</span></div>
+      <div class="metric"><span class="metric-value" id="metric-published">—</span><span class="metric-label">published</span></div>
+    </section>
+
+    <div class="workspace">
+      <main>
+        <div class="toolbar">
+          <div class="legend" aria-label="Node state legend">
+            <span class="legend-item"><i class="dot active"></i>active leaf</span>
+            <span class="legend-item"><i class="dot branched"></i>branched parent</span>
+            <span class="legend-item"><i class="dot"></i>closed leaf</span>
+          </div>
+          <span class="updated" id="updated">not loaded</span>
+        </div>
+        <div class="forest" data-role="tree" id="tree" aria-live="polite"></div>
+      </main>
+
+      <aside data-role="inspector" id="inspector" aria-live="polite">
+        <span class="inspector-kicker">Inspector</span>
+        <h2 class="inspector-title">No selection</h2>
+        <p class="inspector-empty">Select a hypothesis node to inspect its exact statement, direct content, checkpoint results, and child evidence.</p>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const treeElement = document.getElementById("tree");
+    const inspectorElement = document.getElementById("inspector");
+    const refreshButton = document.getElementById("refresh");
+    let selectedId = null;
+    let nodeIndex = new Map();
+
+    const escapeHtml = (value) => String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+
+    const dateLabel = (value) => value
+      ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
+      : "—";
+
+    function checkpointMarkup(content, hours) {
+      const result = content.checkpoints[String(hours)];
+      const label = result ? `${hours}h collected` : `${hours}h pending`;
+      return `<span class="checkpoint ${result ? "done" : ""}" title="${label}">${hours}h</span>`;
+    }
+
+    function contentMarkup(content) {
+      const publication = content.published_at ? `published ${dateLabel(content.published_at)}` : "not published";
+      return `
+        <div class="content-row">
+          <span class="content-id">${escapeHtml(content.id)}</span>
+          <span class="publication" title="${escapeHtml(publication)}">${escapeHtml(publication)}</span>
+          ${checkpointMarkup(content, 24)}
+          ${checkpointMarkup(content, 48)}
+          ${checkpointMarkup(content, 72)}
+        </div>`;
+    }
+
+    function nodeMarkup(node) {
+      nodeIndex.set(node.id, node);
+      const axis = node.axis ? `<span class="badge ${escapeHtml(node.axis)}">${escapeHtml(node.axis)}</span>` : "";
+      const contents = node.contents.length
+        ? `<div class="content-list">${node.contents.map(contentMarkup).join("")}</div>`
+        : `<div class="empty-contents">No direct content yet</div>`;
+      const children = node.children.length
+        ? `<div class="children">${node.children.map(child => `<div class="branch">${nodeMarkup(child)}</div>`).join("")}</div>`
+        : "";
+      return `
+        <div class="node ${selectedId === node.id ? "selected" : ""}" data-node-id="${escapeHtml(node.id)}" tabindex="0" role="button" aria-label="Inspect ${escapeHtml(node.id)}">
+          <div class="node-head">
+            <span class="node-id">${escapeHtml(node.id)}</span>
+            <span class="badges">${axis}<span class="badge ${escapeHtml(node.state)}">${escapeHtml(node.state)}</span></span>
+          </div>
+          <p class="statement">${escapeHtml(node.statement)}</p>
+          ${contents}
+        </div>
+        ${children}`;
+    }
+
+    function renderInspector(node) {
+      if (!node) {
+        inspectorElement.innerHTML = `
+          <span class="inspector-kicker">Inspector</span>
+          <h2 class="inspector-title">No selection</h2>
+          <p class="inspector-empty">Select a hypothesis node to inspect its exact statement, direct content, checkpoint results, and child evidence.</p>`;
+        return;
+      }
+
+      const checkpointDetailMarkup = (result) => {
+        const metrics = ["views", "likes", "comments", "shares", "saves"]
+          .filter(key => result[key] !== null)
+          .map(key => `${key} ${result[key]}`)
+          .join(" · ") || "No public metrics";
+        const interpretation = result.interpretation
+          ? `<div class="checkpoint-copy"><strong>Interpretation</strong><br>${escapeHtml(result.interpretation)}</div>`
+          : "";
+        const limitations = result.limitations
+          ? `<div class="checkpoint-copy"><strong>Limitations</strong><br>${escapeHtml(result.limitations)}</div>`
+          : "";
+        return `
+          <div class="checkpoint-detail">
+            <div class="checkpoint-meta">${result.target_hours}h · ${escapeHtml(metrics)}</div>
+            <div class="checkpoint-copy"><strong>Observed</strong><br>${escapeHtml(result.observed_summary || "No observed summary")}</div>
+            ${interpretation}${limitations}
+          </div>`;
+      };
+
+      const contents = node.contents.length ? node.contents.map(content => {
+        const completed = [24, 48, 72].filter(hour => content.checkpoints[String(hour)]).join(" / ") || "none";
+        const versions = `${content.medium} · ${content.format_id} · message v${content.message_version} · copywriting v${content.copywriting_version}`;
+        const snapshot = content.copy_snapshot || {};
+        const slideshowCopy = Array.isArray(snapshot.slides)
+          ? snapshot.slides.map((layers, index) => `
+              <div class="copy-block"><strong>Slide ${index + 1}</strong>
+                ${(Array.isArray(layers) ? layers : []).map(text => `<div>${escapeHtml(text)}</div>`).join("")}
+              </div>`).join("")
+          : "";
+        const onScreenText = Array.isArray(snapshot.on_screen_text) ? snapshot.on_screen_text : [];
+        const spokenText = Array.isArray(snapshot.spoken_text) ? snapshot.spoken_text : [];
+        const videoCopy = [
+          onScreenText.length
+            ? `<div class="copy-block"><strong>On-screen text</strong>${onScreenText.map(text => `<div>${escapeHtml(text)}</div>`).join("")}</div>`
+            : "",
+          spokenText.length
+            ? `<div class="copy-block"><strong>Spoken text</strong>${spokenText.map(text => `<div>${escapeHtml(text)}</div>`).join("")}</div>`
+            : "",
+        ].join("") || `<div class="empty-copy">No on-screen or spoken text.</div>`;
+        const copySnapshot = content.medium === "slideshow" ? slideshowCopy : videoCopy;
+        const details = [24, 48, 72]
+          .map(hour => content.checkpoints[String(hour)])
+          .filter(Boolean)
+          .map(checkpointDetailMarkup)
+          .join("");
+        return `<li class="detail-item"><strong>${escapeHtml(content.id)}</strong><br>${escapeHtml(versions)}<br>${content.published_at ? "Published" : "Not published"} · checkpoints: ${completed}<div class="content-copy">${copySnapshot}<div class="copy-block"><strong>Caption</strong><div>${escapeHtml(content.caption)}</div></div></div>${details}</li>`;
+      }).join("") : `<li class="detail-item">No direct content</li>`;
+
+      const evidence = node.evidence.length ? node.evidence.map(item => `
+        <li class="detail-item"><strong>${escapeHtml(item.content_id)} · ${item.target_hours}h</strong><br>${escapeHtml(item.observed_summary || "No observed summary")}</li>`).join("") : `<li class="detail-item">No child-creation evidence</li>`;
+
+      inspectorElement.innerHTML = `
+        <span class="inspector-kicker">Inspector</span>
+        <h2 class="inspector-title">${escapeHtml(node.id)}</h2>
+        <section class="detail-section">
+          <h3>Statement</h3>
+          <p>${escapeHtml(node.statement)}</p>
+        </section>
+        <section class="detail-section">
+          <h3>Decision reason</h3>
+          <p>${escapeHtml(node.decision_reason)}</p>
+        </section>
+        <section class="detail-section">
+          <h3>State</h3>
+          <dl class="meta-grid">
+            <dt>state</dt><dd>${escapeHtml(node.state)}</dd>
+            <dt>axis</dt><dd>${escapeHtml(node.axis || "root")}</dd>
+            <dt>parent</dt><dd>${escapeHtml(node.parent_id || "none")}</dd>
+            <dt>created</dt><dd>${escapeHtml(dateLabel(node.created_at))}</dd>
+            <dt>evaluated</dt><dd>${escapeHtml(dateLabel(node.last_evaluated_at))}</dd>
+            <dt>closed</dt><dd>${escapeHtml(dateLabel(node.closed_at))}</dd>
+          </dl>
+        </section>
+        ${node.closure_reason ? `<section class="detail-section"><h3>Closure reason</h3><p>${escapeHtml(node.closure_reason)}</p></section>` : ""}
+        <section class="detail-section"><h3>Direct content</h3><ul class="detail-list">${contents}</ul></section>
+        <section class="detail-section"><h3>Creation evidence</h3><ul class="detail-list">${evidence}</ul></section>`;
+    }
+
+    function bindNodeEvents() {
+      document.querySelectorAll("[data-node-id]").forEach(element => {
+        const select = () => {
+          selectedId = element.dataset.nodeId;
+          document.querySelectorAll(".node.selected").forEach(node => node.classList.remove("selected"));
+          element.classList.add("selected");
+          renderInspector(nodeIndex.get(selectedId));
+        };
+        element.addEventListener("click", event => { event.stopPropagation(); select(); });
+        element.addEventListener("keydown", event => {
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(); }
+        });
+      });
+    }
+
+    function render(data) {
+      document.getElementById("metric-hypotheses").textContent = data.summary.hypotheses;
+      document.getElementById("metric-leaves").textContent = data.summary.active_leaves;
+      document.getElementById("metric-contents").textContent = data.summary.contents;
+      document.getElementById("metric-published").textContent = data.summary.published;
+      document.getElementById("updated").textContent = `loaded ${new Date().toLocaleTimeString()}`;
+      nodeIndex = new Map();
+
+      if (!data.roots.length) {
+        selectedId = null;
+        treeElement.innerHTML = `<div class="empty-state"><div><h2>No hypotheses yet</h2><p>The viewer is connected. Create the first root hypothesis and refresh; this surface will derive the tree directly from SQLite.</p></div></div>`;
+        renderInspector(null);
+        return;
+      }
+
+      treeElement.innerHTML = data.roots.map(root => `<section class="root"><div class="branch">${nodeMarkup(root)}</div></section>`).join("");
+      bindNodeEvents();
+      renderInspector(nodeIndex.get(selectedId));
+    }
+
+    async function loadData() {
+      refreshButton.disabled = true;
+      try {
+        const response = await fetch("/api/tree");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `Request failed: ${response.status}`);
+        render(data);
+      } catch (error) {
+        treeElement.innerHTML = `<div class="error-state"><div><h2>Could not read the tree</h2><p>${escapeHtml(error.message)}</p></div></div>`;
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
+    refreshButton.addEventListener("click", loadData);
+    loadData();
+  </script>
+</body>
+</html>
